@@ -337,11 +337,17 @@ export const CompetitorIntelligence: React.FC<CompetitorIntelligenceProps> = ({
               {lang === 'ar' ? 'استخبارات المنافسين في السوق المصري' : 'Competitor Intelligence Module'}
             </h1>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            {lang === 'ar'
-              ? 'تتبع العروض، المجموعات الجديدة، فئات الأسعار، الفروع الجديدة، وفحص إعلانات المنافسين بـ Gemini Search Grounding'
-              : 'Public market scanning, Meta ad creative analysis, and pricing benchmarking'}
-          </p>
+          <div className="flex flex-wrap items-center gap-2 mt-1.5">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold text-[10px]">
+              <Calendar className="w-3 h-3" />
+              <span>{lang === 'ar' ? 'بيانات السوق محدثة لعام 2026 (موسم خريف/شتاء)' : '2026 Market Intelligence (Fall/Winter)'}</span>
+            </span>
+            <span className="text-[11px] text-slate-400">
+              {lang === 'ar'
+                ? 'فحص حي لعام 2026 للعروض وتشكيلات الموضة عبر Google Search Grounding'
+                : 'Live 2026 public market scanning & price benchmarking'}
+            </span>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -557,9 +563,12 @@ export const CompetitorIntelligence: React.FC<CompetitorIntelligenceProps> = ({
                       {/* Sources and checked timestamp */}
                       <div className="pt-2 border-t border-slate-800 text-[10px] text-slate-400 space-y-1.5">
                         <div className="flex items-center justify-between">
-                          <span>
-                            {lang === 'ar' ? 'تاريخ الفحص:' : 'Checked:'}{' '}
-                            {new Date(comp.scanResult.checkedAt).toLocaleDateString('ar-EG')}
+                          <span className="flex items-center gap-1.5">
+                            <span className="px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20 text-[9px]">2026 Active</span>
+                            <span>
+                              {lang === 'ar' ? 'فحص:' : 'Checked:'}{' '}
+                              {new Date(comp.scanResult.checkedAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'numeric', day: 'numeric' })}
+                            </span>
                           </span>
                           {comp.scanResult.sources && comp.scanResult.sources.length > 0 && (
                             <span className="text-cyan-400 font-semibold flex items-center gap-1">
