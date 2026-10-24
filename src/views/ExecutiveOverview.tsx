@@ -169,8 +169,8 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
           </div>
           <p className="text-xs text-slate-400 mt-1">
             {lang === 'ar'
-              ? 'تحليل أداء 27 فرعاً في مصر (مولات، محافظات، أوتلت شبرا، متجر إلكتروني) لشهر أغسطس 2026'
-              : 'Performance analytics for 27 retail outlets across Egypt (August 2026)'}
+              ? 'تحليل أداء 27 فرعاً في مصر (مولات، محافظات، أوتلت شبرا، متجر إلكتروني) لعام 2026'
+              : 'Performance analytics for 27 retail outlets across Egypt (2026 Season)'}
           </p>
         </div>
 
