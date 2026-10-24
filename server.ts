@@ -809,17 +809,25 @@ ${JSON.stringify(competitorsList, null, 2)}
 
 // Setup Vite or Static File Serving
 async function startServer() {
-  const isDev = process.env.NODE_ENV !== 'production';
+  const distPath = path.resolve(process.cwd(), 'dist');
+  const hasDist = fs.existsSync(distPath) && fs.existsSync(path.join(distPath, 'index.html'));
 
-  if (isDev) {
+  if (hasDist && process.env.NODE_ENV === 'production') {
+    console.log('Serving production build from dist/');
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  } else {
+    console.log('Starting Vite server middleware...');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
-  } else {
-    const distPath = path.resolve(process.cwd(), 'dist');
-    if (fs.existsSync(distPath)) {
+
+    // If dist exists, also serve it as fallback
+    if (hasDist) {
       app.use(express.static(distPath));
       app.get('*', (req, res) => {
         res.sendFile(path.join(distPath, 'index.html'));
