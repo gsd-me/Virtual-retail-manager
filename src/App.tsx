@@ -77,7 +77,26 @@ export default function App() {
   const [dailySales, setDailySales] = useState<DailyStoreSalesRecord[]>(initialData.dailySales);
   const [categories, setCategories] = useState<CategoryDCSItem[]>(initialData.categories);
   const [styles, setStyles] = useState<StyleDescItem[]>(initialData.styles);
-  const [competitors, setCompetitors] = useState<CompetitorProfile[]>(initialData.competitors);
+  const [competitors, setCompetitors] = useState<CompetitorProfile[]>(() => {
+    try {
+      const saved = localStorage.getItem('rcc_competitors');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn('Failed reading competitors from storage', e);
+    }
+    return initialData.competitors;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('rcc_competitors', JSON.stringify(competitors));
+    } catch (e) {
+      console.warn('Failed saving competitors to storage', e);
+    }
+  }, [competitors]);
   const [customers, setCustomers] = useState<CustomerRecord[]>(() => generateRealisticCustomers(120));
   const [inventoryItems, setInventoryItems] = useState<InventoryItemRecord[]>(() => generateRealisticInventory());
 

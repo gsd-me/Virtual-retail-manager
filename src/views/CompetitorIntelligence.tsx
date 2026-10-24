@@ -19,6 +19,7 @@ import {
   ArrowRight,
   Eye,
   Camera,
+  Trash2,
 } from 'lucide-react';
 import {
   CompetitorProfile,
@@ -32,7 +33,7 @@ import { formatCurrency, formatNumber } from '../utils/calculations';
 
 interface CompetitorIntelligenceProps {
   competitors: CompetitorProfile[];
-  onUpdateCompetitors: (updated: CompetitorProfile[]) => void;
+  onUpdateCompetitors: (updated: CompetitorProfile[] | ((prev: CompetitorProfile[]) => CompetitorProfile[])) => void;
   chainMetrics: ChainMetrics;
   categories: CategoryDCSItem[];
   lang: 'ar' | 'en';
@@ -80,6 +81,11 @@ export const CompetitorIntelligence: React.FC<CompetitorIntelligenceProps> = ({
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [weeklyReport, setWeeklyReport] = useState<WeeklyCompetitorReportData | null>(null);
 
+  // Delete Competitor Handler
+  const handleDeleteCompetitor = (id: string) => {
+    onUpdateCompetitors((prev: CompetitorProfile[]) => (prev || competitors).filter(c => c.id !== id));
+  };
+
   // Add Competitor Handler
   const handleAddCompetitor = (autoScan: boolean = true) => {
     if (!newCompName.trim()) return;
@@ -91,8 +97,12 @@ export const CompetitorIntelligence: React.FC<CompetitorIntelligenceProps> = ({
       instagramUrl: newCompIg.trim() || undefined,
       tiktokUrl: newCompTiktok.trim() || undefined,
     };
-    const updated = [...competitors, newComp];
-    onUpdateCompetitors(updated);
+
+    onUpdateCompetitors((prev: CompetitorProfile[]) => {
+      const base = prev || competitors;
+      return [...base, newComp];
+    });
+
     setNewCompName('');
     setNewCompWeb('');
     setNewCompFb('');
@@ -124,20 +134,25 @@ export const CompetitorIntelligence: React.FC<CompetitorIntelligenceProps> = ({
       if (!res.ok) throw new Error('Failed to scan competitor');
       const scanData = await res.json();
 
-      const updated = competitors.map(c => {
-        if (c.id === comp.id) {
-          return {
-            ...c,
-            lastScannedAt: new Date().toISOString(),
-            scanResult: scanData,
-          };
+      onUpdateCompetitors((prev: CompetitorProfile[]) => {
+        const base = prev || competitors;
+        const exists = base.some(c => c.id === comp.id);
+        if (!exists) {
+          return [...base, { ...comp, lastScannedAt: new Date().toISOString(), scanResult: scanData }];
         }
-        return c;
+        return base.map(c => {
+          if (c.id === comp.id) {
+            return {
+              ...c,
+              lastScannedAt: new Date().toISOString(),
+              scanResult: scanData,
+            };
+          }
+          return c;
+        });
       });
-
-      onUpdateCompetitors(updated);
     } catch (err) {
-      console.error(err);
+      console.error('Scan error:', err);
     } finally {
       setScanningId(null);
     }
@@ -229,7 +244,7 @@ export const CompetitorIntelligence: React.FC<CompetitorIntelligenceProps> = ({
       instagramUrl: brand.instagramUrl,
     };
 
-    onUpdateCompetitors([...competitors, newComp]);
+    onUpdateCompetitors((prev: CompetitorProfile[]) => [...(prev || competitors), newComp]);
     handleScanCompetitor(newComp);
   };
 
@@ -454,15 +469,24 @@ export const CompetitorIntelligence: React.FC<CompetitorIntelligenceProps> = ({
                       </div>
                     </div>
 
-                    {comp.scanResult?.strategicThreatLevel && (
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                        comp.scanResult.strategicThreatLevel === 'مرتفع'
-                          ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                          : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                      }`}>
-                        {lang === 'ar' ? 'تهديد:' : 'Threat:'} {comp.scanResult.strategicThreatLevel}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      {comp.scanResult?.strategicThreatLevel && (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                          comp.scanResult.strategicThreatLevel === 'مرتفع'
+                            ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                            : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                        }`}>
+                          {lang === 'ar' ? 'تهديد:' : 'Threat:'} {comp.scanResult.strategicThreatLevel}
+                        </span>
+                      )}
+                      <button
+                        onClick={() => handleDeleteCompetitor(comp.id)}
+                        className="p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                        title={lang === 'ar' ? 'حذف المنافس' : 'Delete competitor'}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Scan Summary */}
@@ -890,77 +914,89 @@ export const CompetitorIntelligence: React.FC<CompetitorIntelligenceProps> = ({
               </div>
             </div>
 
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="text-slate-400 block mb-1">{lang === 'ar' ? 'اسم المنافس *' : 'Name *'}</label>
-                <input
-                  type="text"
-                  value={newCompName}
-                  onChange={e => setNewCompName(e.target.value)}
-                  placeholder="مثال: Mango Egypt, LC Waikiki..."
-                  className="w-full bg-slate-950 text-white border border-slate-800 p-2.5 rounded-xl outline-none focus:border-cyan-500"
-                />
+            <form onSubmit={(e) => { e.preventDefault(); handleAddCompetitor(true); }} className="space-y-4">
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="text-slate-400 block mb-1">{lang === 'ar' ? 'اسم المنافس *' : 'Name *'}</label>
+                  <input
+                    type="text"
+                    value={newCompName}
+                    onChange={e => setNewCompName(e.target.value)}
+                    placeholder="مثال: Mango Egypt, LC Waikiki..."
+                    className="w-full bg-slate-950 text-white border border-slate-800 p-2.5 rounded-xl outline-none focus:border-cyan-500"
+                    autoFocus
+                  />
+                </div>
+
+                <div>
+                  <label className="text-slate-400 block mb-1">{lang === 'ar' ? 'الموقع الإلكتروني' : 'Website'}</label>
+                  <input
+                    type="text"
+                    value={newCompWeb}
+                    onChange={e => setNewCompWeb(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full bg-slate-950 text-white border border-slate-800 p-2.5 rounded-xl outline-none focus:border-cyan-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-slate-400 block mb-1">{lang === 'ar' ? 'صفحة فيسبوك' : 'Facebook Page'}</label>
+                  <input
+                    type="text"
+                    value={newCompFb}
+                    onChange={e => setNewCompFb(e.target.value)}
+                    placeholder="https://facebook.com/..."
+                    className="w-full bg-slate-950 text-white border border-slate-800 p-2.5 rounded-xl outline-none focus:border-cyan-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-slate-400 block mb-1">{lang === 'ar' ? 'حساب إنستجرام' : 'Instagram'}</label>
+                  <input
+                    type="text"
+                    value={newCompIg}
+                    onChange={e => setNewCompIg(e.target.value)}
+                    placeholder="https://instagram.com/..."
+                    className="w-full bg-slate-950 text-white border border-slate-800 p-2.5 rounded-xl outline-none focus:border-cyan-500"
+                  />
+                </div>
+
+                <div className="p-3 rounded-xl bg-cyan-950/20 border border-cyan-500/30 text-[11px] text-cyan-300 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 shrink-0 text-cyan-400" />
+                  <span>
+                    {lang === 'ar'
+                      ? 'سيقوم الذكاء الاصطناعي بالبحث الفوري على الإنترنت وجمع العروض والأسعار والتشكيلات بمجرد الإضافة.'
+                      : 'AI will immediately search the web and compile live discounts, prices, and collections.'}
+                  </span>
+                </div>
               </div>
 
-              <div>
-                <label className="text-slate-400 block mb-1">{lang === 'ar' ? 'الموقع الإلكتروني' : 'Website'}</label>
-                <input
-                  type="text"
-                  value={newCompWeb}
-                  onChange={e => setNewCompWeb(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full bg-slate-950 text-white border border-slate-800 p-2.5 rounded-xl outline-none focus:border-cyan-500"
-                />
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+                >
+                  {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAddCompetitor(false)}
+                  disabled={!newCompName.trim()}
+                  className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors"
+                >
+                  {lang === 'ar' ? 'إضافة فقط' : 'Add Only'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={!newCompName.trim()}
+                  className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-slate-950 font-black text-xs transition-colors flex items-center gap-1.5"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>{lang === 'ar' ? 'إضافة وفحص الإنترنت فوراً' : 'Add & Scan Web'}</span>
+                </button>
               </div>
-
-              <div>
-                <label className="text-slate-400 block mb-1">{lang === 'ar' ? 'صفحة فيسبوك' : 'Facebook Page'}</label>
-                <input
-                  type="text"
-                  value={newCompFb}
-                  onChange={e => setNewCompFb(e.target.value)}
-                  placeholder="https://facebook.com/..."
-                  className="w-full bg-slate-950 text-white border border-slate-800 p-2.5 rounded-xl outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-400 block mb-1">{lang === 'ar' ? 'حساب إنستجرام' : 'Instagram'}</label>
-                <input
-                  type="text"
-                  value={newCompIg}
-                  onChange={e => setNewCompIg(e.target.value)}
-                  placeholder="https://instagram.com/..."
-                  className="w-full bg-slate-950 text-white border border-slate-800 p-2.5 rounded-xl outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <div className="p-3 rounded-xl bg-cyan-950/20 border border-cyan-500/30 text-[11px] text-cyan-300 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 shrink-0 text-cyan-400" />
-                <span>
-                  {lang === 'ar'
-                    ? 'سيقوم الذكاء الاصطناعي بالبحث الفوري على الإنترنت وجمع العروض والأسعار والتشكيلات بمجرد الإضافة.'
-                    : 'AI will immediately search the web and compile live discounts, prices, and collections.'}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
-              >
-                {lang === 'ar' ? 'إلغاء' : 'Cancel'}
-              </button>
-              <button
-                onClick={() => handleAddCompetitor(true)}
-                disabled={!newCompName.trim()}
-                className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-slate-950 font-black text-xs transition-colors flex items-center gap-1.5"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>{lang === 'ar' ? 'إضافة وفحص الإنترنت فوراً' : 'Add & Scan Web'}</span>
-              </button>
-            </div>
+            </form>
           </div>
         </div>
       )}
