@@ -1,0 +1,6 @@
+{
+  "name": "Retail Command Center",
+  "description": "Decision-support and performance analytics system for a women's fashion retail chain in Egypt with AI insights and competitor intelligence.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
