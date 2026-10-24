@@ -812,27 +812,19 @@ async function startServer() {
   const distPath = path.resolve(process.cwd(), 'dist');
   const hasDist = fs.existsSync(distPath) && fs.existsSync(path.join(distPath, 'index.html'));
 
-  if (hasDist && process.env.NODE_ENV === 'production') {
-    console.log('Serving production build from dist/');
+  if (hasDist) {
+    console.log(`Serving production build from ${distPath}`);
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   } else {
-    console.log('Starting Vite server middleware...');
+    console.log('Dist not found, starting Vite server middleware...');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
-
-    // If dist exists, also serve it as fallback
-    if (hasDist) {
-      app.use(express.static(distPath));
-      app.get('*', (req, res) => {
-        res.sendFile(path.join(distPath, 'index.html'));
-      });
-    }
   }
 
   app.listen(port, '0.0.0.0', () => {
