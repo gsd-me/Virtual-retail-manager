@@ -1,0 +1,20 @@
+{
+  "name": "Retail Command Center (Egypt)",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Retail Command Center Application",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "postCreateCommand": "npm install --legacy-peer-deps && npm install react-is --legacy-peer-deps",
+  "postStartCommand": "npm run dev",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  }
+}
