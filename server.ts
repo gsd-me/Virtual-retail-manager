@@ -26,12 +26,18 @@ async function callGeminiWithFallback(params: {
   config?: any;
   preferredModel?: string;
 }) {
-  const modelsToTry = [
-    params.preferredModel || 'gemini-3.8-flash',
+  const candidateModels = [
+    params.preferredModel,
+    'gemini-3.5-flash',
+    'gemini-3.5-flash-lite',
+    'gemini-3-flash-preview',
+    'gemini-flash-lite-latest',
+    'gemini-3.8-flash',
     'gemini-3.1-flash-lite',
-    'gemini-3.1-pro-preview',
-  ];
+  ].filter(Boolean) as string[];
 
+  // Deduplicate candidate models while preserving order
+  const modelsToTry = Array.from(new Set(candidateModels));
   let lastError: any = null;
 
   for (const model of modelsToTry) {
@@ -47,8 +53,27 @@ async function callGeminiWithFallback(params: {
     } catch (err: any) {
       console.warn(`Model ${model} encountered error:`, err?.message || err);
       lastError = err;
+
+      // If tools (e.g. googleSearch) triggered quota/rejection, immediately retry without tools
+      if (params.config?.tools && (err?.status === 429 || `${err?.message}`.includes('quota') || `${err?.message}`.includes('RESOURCE_EXHAUSTED'))) {
+        try {
+          const configWithoutTools = { ...params.config };
+          delete configWithoutTools.tools;
+          const retryResponse = await ai.models.generateContent({
+            model,
+            contents: params.contents,
+            config: configWithoutTools,
+          });
+          if (retryResponse && retryResponse.text) {
+            return retryResponse;
+          }
+        } catch (retryErr: any) {
+          console.warn(`Model ${model} retry without tools error:`, retryErr?.message || retryErr);
+        }
+      }
+
       // brief pause before trying next fallback model
-      await new Promise(res => setTimeout(res, 500));
+      await new Promise(res => setTimeout(res, 250));
     }
   }
 
@@ -98,7 +123,7 @@ ${JSON.stringify(alerts, null, 2)}
 `;
 
     const response = await callGeminiWithFallback({
-      preferredModel: 'gemini-3.8-flash',
+      preferredModel: 'gemini-3.5-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -158,7 +183,7 @@ ${JSON.stringify(chainBenchmark, null, 2)}
 `;
 
     const response = await callGeminiWithFallback({
-      preferredModel: 'gemini-3.8-flash',
+      preferredModel: 'gemini-3.5-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -210,7 +235,7 @@ ${JSON.stringify(storeBenchmark, null, 2)}
 `;
 
     const response = await callGeminiWithFallback({
-      preferredModel: 'gemini-3.8-flash',
+      preferredModel: 'gemini-3.5-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -258,7 +283,7 @@ ${message}
 `;
 
     const response = await callGeminiWithFallback({
-      preferredModel: 'gemini-3.8-flash',
+      preferredModel: 'gemini-3.5-flash',
       contents: prompt,
     });
 
@@ -295,7 +320,7 @@ ${JSON.stringify(dataQualitySummary, null, 2)}
 `;
 
     const response = await callGeminiWithFallback({
-      preferredModel: 'gemini-3.8-flash',
+      preferredModel: 'gemini-3.5-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -378,7 +403,7 @@ app.post('/api/gemini/competitor-scan', async (req, res) => {
     try {
       const searchPrompt = `${prompt}\n\nSearch keywords: "${brand} Egypt fashion offers discounts collections 2026" -2024 -2023 -2025`;
       const searchResponse = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
+        model: 'gemini-3.5-flash',
         contents: searchPrompt,
         config: {
           tools: [{ googleSearch: {} }],
@@ -407,7 +432,7 @@ app.post('/api/gemini/competitor-scan', async (req, res) => {
     if (!parsed) {
       try {
         const directResponse = await callGeminiWithFallback({
-          preferredModel: 'gemini-3.1-flash-lite',
+          preferredModel: 'gemini-3.5-flash',
           contents: prompt,
           config: {
             responseMimeType: 'application/json',
@@ -588,7 +613,7 @@ app.post('/api/gemini/discover-competitors', async (req, res) => {
 
     try {
       const response = await callGeminiWithFallback({
-        preferredModel: 'gemini-3.1-flash-lite',
+        preferredModel: 'gemini-3.5-flash',
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
@@ -736,7 +761,7 @@ app.post('/api/gemini/analyze-ad-image', async (req, res) => {
 `;
 
     const response = await callGeminiWithFallback({
-      preferredModel: 'gemini-3.8-flash',
+      preferredModel: 'gemini-3.5-flash',
       contents: {
         parts: [
           {
@@ -825,7 +850,7 @@ ${JSON.stringify(competitorsList, null, 2)}
 `;
 
     const response = await callGeminiWithFallback({
-      preferredModel: 'gemini-3.1-flash-lite',
+      preferredModel: 'gemini-3.5-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
