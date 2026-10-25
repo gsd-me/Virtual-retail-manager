@@ -5,7 +5,8 @@
   "portsAttributes": {
     "3000": {
       "label": "Retail Command Center Application",
-      "onAutoForward": "openBrowser"
+      "onAutoForward": "openBrowser",
+      "visibility": "public"
     }
   },
   "postCreateCommand": "npm install --legacy-peer-deps && npm install react-is --legacy-peer-deps",

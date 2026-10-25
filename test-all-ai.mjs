@@ -162,6 +162,9 @@ async function runTests() {
   }
   console.log(`\nScore: ${passedCount} / ${results.length} PASSED`);
   console.log('====================================================');
+  if (passedCount !== results.length) {
+    process.exit(1);
+  }
 }
 
 runTests();
